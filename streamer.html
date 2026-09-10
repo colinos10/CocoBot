@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Régie Live • Guess The Rank (Streamer VS Chat)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            esport: ['"Bebas Neue"', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+            hud: ['Orbitron', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              red: '#ff003c',
+              cyan: '#00e5ff',
+              magenta: '#ff007f',
+              gold: '#ffb703',
+              dark: '#08080a',
+              card: '#111116',
+              surface: '#181820',
+              border: '#262633',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glow-cyan { text-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
+    .glow-magenta { text-shadow: 0 0 15px rgba(255, 0, 127, 0.5); }
+    .glow-gold { text-shadow: 0 0 15px rgba(255, 183, 3, 0.5); }
+    .bg-grid {
+      background-size: 30px 30px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+  </style>
+</head>
+
+<body class="bg-[#08080a] text-zinc-100 font-sans h-screen flex flex-col overflow-hidden bg-grid select-none">
+
+  <!-- Header Régie avec SCOREBOARD -->
+  <header class="h-16 border-b border-zinc-800/80 bg-black/70 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="zap" class="w-5 h-5 text-brand-red fill-brand-red"></i>
+        <span class="font-esport text-2xl tracking-wider uppercase text-white">Stream<span class="text-brand-red">Hub</span></span>
+      </div>
+      
+      <!-- Compteur Dynamique de la manche en cours -->
+      <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-hud">
+        <span class="text-zinc-500">PROGRESSION :</span>
+        <span id="matchProgressionText" class="text-brand-gold font-bold">CLIP 1 / 1</span>
+      </div>
+    </div>
+
+    <!-- DUEL STREAMER VS CHAT SCOREBOARD -->
+    <div class="flex items-center gap-6 bg-zinc-950/90 border border-zinc-800 px-5 py-1.5 rounded-xl shadow-inner">
+      <div class="flex items-center gap-2.5 text-right">
+        <div>
+          <span class="text-[10px] font-black uppercase text-brand-cyan tracking-wider block">STREAMER</span>
+          <span id="scoreStreamer" class="font-hud text-xl font-black text-white glow-cyan">0</span>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-brand-cyan/10 border border-brand-cyan/40 flex items-center justify-center text-brand-cyan font-bold">
+          <i data-lucide="crown" class="w-4 h-4"></i>
+        </div>
+      </div>
+
+      <div class="font-esport text-2xl text-zinc-500 tracking-wider">VS</div>
+
+      <div class="flex items-center gap-2.5 text-left">
+        <div class="w-8 h-8 rounded-lg bg-brand-magenta/10 border border-brand-magenta/40 flex items-center justify-center text-brand-magenta font-bold">
+          <i data-lucide="messages-square" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-black uppercase text-brand-magenta tracking-wider block">LE CHAT</span>
+          <span id="scoreChat" class="font-hud text-xl font-black text-white glow-magenta">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Twitch Status & Connexion -->
+    <div class="flex items-center gap-3">
+      <div id="twitchStatusBadge" class="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-400">
+        <span id="twitchStatusDot" class="w-2 h-2 rounded-full bg-zinc-600"></span>
+        <span id="twitchStatusText">Twitch déconnecté</span>
+      </div>
+
+      <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-1">
+        <span class="text-zinc-500 text-xs pl-2 pr-1 font-semibold">twitch.tv/</span>
+        <input id="twitchChannelInput" type="text" value="colinos10_off" placeholder="pseudo" class="bg-transparent text-xs text-white outline-none w-28 placeholder:text-zinc-600 font-medium">
+        <button id="twitchConnectBtn" onclick="toggleTwitchConnection()" class="px-2.5 py-1 text-[11px] font-bold bg-brand-red hover:bg-red-600 text-white rounded transition">
+          Connecter
+        </button>
+      </div>
+
+      <button onclick="toggleChatVote()" id="voteStatusBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-bold hover:border-zinc-700 transition">
+        <i data-lucide="message-square" class="w-3.5 h-3.5 text-brand-red"></i>
+        <span id="voteChatLabel" class="text-emerald-400">Votes : OUVERTS (!rank)</span>
+      </button>
+
+      <button onclick="toggleFullscreen()" class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition" title="Plein écran">
+        <i data-lucide="maximize" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenu Principal -->
+  <main class="flex-1 grid grid-cols-12 gap-4 p-4 min-h-0 overflow-hidden">
+
+    <!-- GAUCHE : File d'attente (3 cols) -->
+    <section class="col-span-3 flex flex-col bg-brand-card/90 border border-brand-border rounded-xl p-3.5 overflow-hidden">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+        <div>
+          <h2 class="font-esport text-lg tracking-wide uppercase text-zinc-200">Clips en attente</h2>
+          <p class="text-[11px] text-zinc-400 font-medium"><span id="queueCount">0</span> clips dans la liste</p>
+        </div>
+        <button onclick="promptAddCustomClip()" class="px-2.5 py-1 text-[10px] font-bold uppercase rounded bg-brand-red/10 hover:bg-brand-red hover:text-white text-brand-red border border-brand-red/30 transition flex items-center gap-1">
+          <i data-lucide="plus" class="w-3 h-3"></i> Clip
+        </button>
+      </div>
+
+      <!-- Filtres -->
+      <div class="grid grid-cols-6 gap-1 py-2 border-b border-zinc-800/80">
+        <button onclick="filterQueue('all')" class="filter-btn text-[10px] font-bold uppercase py-1 rounded bg-brand-red text-white transition">Tous</button>
+        <button onclick="filterQueue('rl')" class="filter-btn text-[10px] font-bold uppercase py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition">RL</button>
+        <button onclick="filterQueue('val')" class="filter-btn text-[10px] font-bold uppercase py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition">VAL</button>
+        <button onclick="filterQueue('bs')" class="filter-btn text-[10px] font-bold uppercase py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition">BS</button>
+        <button onclick="filterQueue('ow2')" class="filter-btn text-[10px] font-bold uppercase py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition">OW2</button>
+        <button onclick="filterQueue('pal')" class="filter-btn text-[10px] font-bold uppercase py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition">PAL</button>
+      </div>
+
+      <!-- Liste des clips -->
+      <div id="clipsListContainer" class="flex-1 overflow-y-auto space-y-2 py-2 pr-1"></div>
+    </section>
+
+    <!-- CENTRE : Lecteur & Pronostics (6 cols) -->
+    <section class="col-span-6 flex flex-col gap-3 min-h-0 overflow-hidden">
+      <div class="relative flex-1 bg-black rounded-xl border border-brand-border overflow-hidden group shadow-2xl flex items-center justify-center">
+        
+        <!-- Badges Vidéo -->
+        <div class="absolute top-3 left-3 z-10 flex items-center gap-2">
+          <span id="currentClipGameBadge" class="px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider border backdrop-blur-md bg-blue-500/20 text-blue-400 border-blue-500/30">
+            Rocket League
+          </span>
+          <span id="currentClipAuthor" class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-black/60 backdrop-blur-md border border-zinc-800 text-zinc-300">
+            @Viewer
+          </span>
+        </div>
+
+        <button onclick="peekSecretRank()" class="absolute top-3 right-3 z-10 text-[11px] bg-zinc-900/80 hover:bg-brand-red/20 text-zinc-400 hover:text-brand-red border border-zinc-800 px-2.5 py-1 rounded-md transition flex items-center gap-1.5 backdrop-blur">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i> Secret
+        </button>
+
+        <!-- Lecteur Vidéo HTML5 -->
+        <video id="videoPlayer" class="w-full h-full object-contain bg-black" controls autoplay playsinline>
+          <source id="videoSource" src="" type="video/mp4">
+        </video>
+
+        <!-- OVERLAY DE FIN / REVELATION DU VRAI RANG -->
+        <div id="videoRevealOverlay" class="absolute inset-0 bg-black/95 backdrop-blur-xl z-20 flex flex-col items-center justify-center p-6 text-center hidden">
+          <span class="text-xs font-black uppercase tracking-widest text-zinc-400 mb-2">Résultat du Match</span>
+          <h3 class="font-esport text-3xl tracking-wider uppercase text-zinc-300">LE VRAI RANG ÉTAIT :</h3>
+          
+          <div id="overlayRealRank" class="font-esport text-6xl md:text-7xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-red via-brand-gold to-brand-cyan my-3">
+            GRAND CHAMPION
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 w-full max-w-md my-4">
+            <div class="bg-zinc-900/80 border border-brand-cyan/30 rounded-xl p-3">
+              <span class="text-[10px] font-black uppercase text-brand-cyan block">STREAMER</span>
+              <div id="overlayStreamerGuess" class="text-sm font-bold text-white mt-0.5">-</div>
+              <div id="overlayStreamerPoints" class="text-xs font-hud font-black text-emerald-400 mt-1">-</div>
+            </div>
+            <div class="bg-zinc-900/80 border border-brand-magenta/30 rounded-xl p-3">
+              <span class="text-[10px] font-black uppercase text-brand-magenta block">LE CHAT</span>
+              <div id="overlayChatGuess" class="text-sm font-bold text-white mt-0.5">-</div>
+              <div id="overlayChatPoints" class="text-xs font-hud font-black text-amber-400 mt-1">-</div>
+            </div>
+          </div>
+
+          <p id="overlayComment" class="text-xs text-zinc-400 max-w-md italic mb-4">"Clip validé !"</p>
+
+          <div class="flex items-center gap-3">
+            <button onclick="hideRankSecret()" class="px-5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white transition">
+              Revoir la vidéo
+            </button>
+            <button onclick="nextClip()" class="px-5 py-2 rounded-lg bg-brand-red hover:bg-red-600 text-xs font-bold text-white flex items-center gap-2 shadow-lg">
+              Clip suivant <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de pronostic Streamer & Contrôles -->
+      <div class="bg-brand-card border border-brand-border rounded-xl p-3 flex flex-col gap-2 shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="crown" class="w-4 h-4 text-brand-cyan"></i>
+            <span id="streamerPronosticTitle" class="text-xs font-black uppercase tracking-wider text-zinc-300">
+              1. Choisi ton pronostic streamer :
+            </span>
+          </div>
+          <span id="selectedStreamerBadge" class="text-[11px] font-bold text-zinc-500 uppercase">Aucun sélectionné</span>
+        </div>
+
+        <!-- Boutons de Rangs Dynamiques Streamer -->
+        <div id="streamerRankButtonsContainer" class="flex items-center gap-1.5 overflow-x-auto pb-1"></div>
+
+        <!-- Actions Principales -->
+        <div class="flex items-center justify-between pt-2 border-t border-zinc-800/80 mt-1">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase text-zinc-500">Clip :</span>
+            <span id="currentClipTitle" class="text-xs font-bold text-zinc-300 truncate max-w-[200px]">-</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="prevClip()" class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:text-white text-zinc-400 transition" title="Clip précédent">
+              <i data-lucide="skip-back" class="w-4 h-4"></i>
+            </button>
+
+            <button onclick="revealResultAndScore()" class="px-5 py-2 rounded-lg bg-gradient-to-r from-brand-red to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs uppercase tracking-wider shadow-lg flex items-center gap-2 transition">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+              <span>Révéler & Calculer les points</span>
+            </button>
+
+            <button onclick="nextClip()" class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:text-white text-zinc-400 transition" title="Clip suivant">
+              <i data-lucide="skip-forward" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DROITE : Votes du Chat (3 cols) -->
+    <section class="col-span-3 flex flex-col bg-brand-card/90 border border-brand-border rounded-xl p-3.5 overflow-hidden">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+        <div>
+          <div class="flex items-center gap-2">
+            <i data-lucide="messages-square" class="w-4 h-4 text-brand-magenta"></i>
+            <h2 class="font-esport text-lg tracking-wide uppercase text-zinc-200">Votes du Chat Twitch</h2>
+          </div>
+          <p id="chatGameSubtitle" class="text-[11px] text-zinc-500">Ex: !rank gc / !rank gold</p>
+        </div>
+        <span id="totalVotesCount" class="text-xs font-black font-hud text-brand-magenta px-2 py-0.5 rounded bg-brand-magenta/10 border border-brand-magenta/30">
+          0 vote
+        </span>
+      </div>
+
+      <!-- Liste Dynamique des Barres de Sondage -->
+      <div id="chatRankBarsContainer" class="flex-1 overflow-y-auto space-y-2 py-3 pr-1"></div>
+
+      <!-- Activité en Direct du Tchat -->
+      <div class="h-28 bg-zinc-950/80 border border-zinc-800/80 rounded-lg p-2 flex flex-col">
+        <div class="flex items-center justify-between pb-1 mb-1 border-b border-zinc-900 text-[10px] font-bold text-zinc-500 uppercase">
+          <span>Activité récente</span>
+          <button onclick="resetVotes()" class="text-zinc-500 hover:text-white lowercase text-[10px]">vider</button>
+        </div>
+        <div id="chatActivityFeed" class="flex-1 overflow-y-auto space-y-1 text-xs font-mono"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL FIN DE PARTIE / VAINQUEUR DUEL -->
+  <div id="endGameModal" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
+    <div class="bg-brand-card border-2 border-brand-gold max-w-md w-full rounded-2xl p-6 text-center shadow-2xl relative">
+      <div class="w-20 h-20 mx-auto rounded-full bg-brand-gold/20 border border-brand-gold flex items-center justify-center mb-4">
+        <i data-lucide="trophy" class="w-10 h-10 text-brand-gold animate-bounce"></i>
+      </div>
+      <h2 id="finalTitle" class="font-esport text-4xl text-white">FIN DU DUEL !</h2>
+      <p id="finalWinnerBanner" class="font-hud font-black text-2xl text-brand-cyan my-3 glow-cyan">VICTOIRE DU STREAMER</p>
+      
+      <div class="flex justify-center items-center gap-8 my-6 bg-black/50 p-4 rounded-xl border border-brand-border">
+        <div>
+          <p class="text-xs text-brand-cyan font-bold">STREAMER</p>
+          <p id="finalStreamerScore" class="font-hud text-3xl font-black text-white">0</p>
+        </div>
+        <span class="font-esport text-xl text-zinc-500">VS</span>
+        <div>
+          <p class="text-xs text-brand-magenta font-bold">CHAT</p>
+          <p id="finalChatScore" class="font-hud text-3xl font-black text-white">0</p>
+        </div>
+      </div>
+
+      <button onclick="restartMatch()" class="w-full py-3 bg-brand-red hover:bg-red-600 font-esport text-xl text-white rounded-xl shadow-lg transition">
+        REJOUER UNE SESSION
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 1. CONFIGURATION COMPLETE DES 5 JEUX
+    const GAME_RANKS = {
+      rl: {
+        name: 'Rocket League',
+        ranks: [
+          { id: 'bronze', name: 'Bronze', color: 'text-amber-700', bar: 'bg-amber-700', aliases: ['bronze', 'b1', 'b2', 'b3', 'b'] },
+          { id: 'silver', name: 'Argent', color: 'text-zinc-400', bar: 'bg-zinc-400', aliases: ['argent', 'silver', 's1', 's2', 's3', 's'] },
+          { id: 'gold',   name: 'Or', color: 'text-yellow-400', bar: 'bg-yellow-400', aliases: ['gold', 'or', 'g1', 'g2', 'g3', 'g'] },
+          { id: 'plat',   name: 'Platine', color: 'text-cyan-400', bar: 'bg-cyan-400', aliases: ['platine', 'plat', 'p1', 'p2', 'p3', 'p'] },
+          { id: 'diam',   name: 'Diamant', color: 'text-blue-400', bar: 'bg-blue-400', aliases: ['diamant', 'diamond', 'diam', 'd1', 'd2', 'd3', 'd'] },
+          { id: 'champ',  name: 'Champion', color: 'text-purple-400', bar: 'bg-purple-400', aliases: ['champion', 'champ', 'c1', 'c2', 'c3', 'c'] },
+          { id: 'gc',     name: 'Grand Champ', color: 'text-red-500', bar: 'bg-red-500', aliases: ['grand champion', 'grand champ', 'gc', 'gc1', 'gc2', 'gc3'] },
+          { id: 'ssl',    name: 'SSL', color: 'text-white', bar: 'bg-white', aliases: ['ssl', 'supersonic legend', 'legend'] }
+        ]
+      },
+      val: {
+        name: 'Valorant',
+        ranks: [
+          { id: 'iron',   name: 'Fer', color: 'text-zinc-500', bar: 'bg-zinc-500', aliases: ['fer', 'iron', 'i1', 'i2', 'i3'] },
+          { id: 'bronze', name: 'Bronze', color: 'text-amber-700', bar: 'bg-amber-700', aliases: ['bronze', 'b1', 'b2', 'b3', 'b'] },
+          { id: 'silver', name: 'Argent', color: 'text-zinc-400', bar: 'bg-zinc-400', aliases: ['argent', 'silver', 's1', 's2', 's3', 's'] },
+          { id: 'gold',   name: 'Or', color: 'text-yellow-400', bar: 'bg-yellow-400', aliases: ['gold', 'or', 'g1', 'g2', 'g3', 'g'] },
+          { id: 'plat',   name: 'Platine', color: 'text-cyan-400', bar: 'bg-cyan-400', aliases: ['platine', 'plat', 'p1', 'p2', 'p3', 'p'] },
+          { id: 'diam',   name: 'Diamant', color: 'text-purple-400', bar: 'bg-purple-400', aliases: ['diamant', 'diamond', 'diam', 'd1', 'd2', 'd3', 'd'] },
+          { id: 'asc',    name: 'Ascendant', color: 'text-emerald-400', bar: 'bg-emerald-400', aliases: ['ascendant', 'asc', 'a1', 'a2', 'a3', 'a'] },
+          { id: 'imm',    name: 'Immortel', color: 'text-red-500', bar: 'bg-red-500', aliases: ['immortel', 'immortal', 'im', 'imm', 'im1', 'im2', 'im3'] },
+          { id: 'rad',    name: 'Radiant', color: 'text-yellow-300', bar: 'bg-yellow-300', aliases: ['radiant', 'rad'] }
+        ]
+      },
+      bs: {
+        name: 'Brawl Stars',
+        ranks: [
+          { id: 'bronze',  name: 'Bronze', color: 'text-amber-700', bar: 'bg-amber-700', aliases: ['bronze', 'b1', 'b2', 'b3', 'b'] },
+          { id: 'silver',  name: 'Argent', color: 'text-zinc-400', bar: 'bg-zinc-400', aliases: ['argent', 'silver', 's1', 's2', 's3', 's'] },
+          { id: 'gold',    name: 'Or', color: 'text-yellow-400', bar: 'bg-yellow-400', aliases: ['gold', 'or', 'g1', 'g2', 'g3', 'g'] },
+          { id: 'diam',    name: 'Diamant', color: 'text-blue-400', bar: 'bg-blue-400', aliases: ['diamant', 'diam', 'diamond', 'd1', 'd2', 'd3', 'd'] },
+          { id: 'myth',    name: 'Mythique', color: 'text-purple-400', bar: 'bg-purple-400', aliases: ['mythique', 'mythic', 'myth', 'm1', 'm2', 'm3', 'm'] },
+          { id: 'leg',     name: 'Légendaire', color: 'text-red-500', bar: 'bg-red-500', aliases: ['legendaire', 'legendary', 'leg', 'l1', 'l2', 'l3', 'l'] },
+          { id: 'masters', name: 'Masters', color: 'text-yellow-300', bar: 'bg-yellow-300', aliases: ['master', 'masters', 'pro'] }
+        ]
+      },
+      ow2: {
+        name: 'Overwatch 2',
+        ranks: [
+          { id: 'bronze', name: 'Bronze', color: 'text-amber-700', bar: 'bg-amber-700', aliases: ['bronze', 'b1', 'b2', 'b3', 'b4', 'b5', 'b'] },
+          { id: 'silver', name: 'Argent', color: 'text-zinc-400', bar: 'bg-zinc-400', aliases: ['argent', 'silver', 's1', 's2', 's3', 's4', 's5', 's'] },
+          { id: 'gold',   name: 'Or', color: 'text-yellow-400', bar: 'bg-yellow-400', aliases: ['gold', 'or', 'g1', 'g2', 'g3', 'g4', 'g5', 'g'] },
+          { id: 'plat',   name: 'Platine', color: 'text-cyan-400', bar: 'bg-cyan-400', aliases: ['platine', 'plat', 'p1', 'p2', 'p3', 'p4', 'p5', 'p'] },
+          { id: 'diam',   name: 'Diamant', color: 'text-blue-400', bar: 'bg-blue-400', aliases: ['diamant', 'diamond', 'diam', 'd1', 'd2', 'd3', 'd4', 'd5', 'd'] },
+          { id: 'master', name: 'Master', color: 'text-purple-400', bar: 'bg-purple-400', aliases: ['master', 'masters', 'm1', 'm2', 'm3', 'm4', 'm5'] },
+          { id: 'gm',     name: 'Grandmaster', color: 'text-yellow-300', bar: 'bg-yellow-300', aliases: ['grandmaster', 'gm', 'gm1', 'gm2', 'gm3', 'gm4', 'gm5'] },
+          { id: 'champ',  name: 'Champion', color: 'text-red-500', bar: 'bg-red-500', aliases: ['champion', 'champ'] }
+        ]
+      },
+      pal: {
+        name: 'Paladins',
+        ranks: [
+          { id: 'bronze', name: 'Bronze', color: 'text-amber-700', bar: 'bg-amber-700', aliases: ['bronze', 'b1', 'b2', 'b3', 'b4', 'b5'] },
+          { id: 'silver', name: 'Argent', color: 'text-zinc-400', bar: 'bg-zinc-400', aliases: ['argent', 'silver', 's1', 's2', 's3', 's4', 's5'] },
+          { id: 'gold',   name: 'Or', color: 'text-yellow-400', bar: 'bg-yellow-400', aliases: ['gold', 'or', 'g1', 'g2', 'g3', 'g4', 'g5'] },
+          { id: 'plat',   name: 'Platine', color: 'text-cyan-400', bar: 'bg-cyan-400', aliases: ['platine', 'plat', 'p1', 'p2', 'p3', 'p4', 'p5'] },
+          { id: 'diam',   name: 'Diamant', color: 'text-blue-400', bar: 'bg-blue-400', aliases: ['diamant', 'diamond', 'diam', 'd1', 'd2', 'd3', 'd4', 'd5'] },
+          { id: 'master', name: 'Master', color: 'text-purple-400', bar: 'bg-purple-400', aliases: ['master', 'masters'] },
+          { id: 'gm',     name: 'Grandmaster', color: 'text-red-500', bar: 'bg-red-500', aliases: ['grandmaster', 'gm'] }
+        ]
+      }
+    };
+
+    // 2. LISTE DE CLIPS
+    let clipsQueue = [
+      {
+        id: 1,
+        author: '@AcrobatRL',
+        game: 'rl',
+        gameName: 'Rocket League',
+        badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        title: 'Double Tap Musty Flick',
+        realRankId: 'gc',
+        realRank: 'Grand Champion 2',
+        comment: 'Très bonne mécanique de recovery, mais placement parfois trop agressif.',
+        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+      },
+      {
+        id: 2,
+        author: '@JettMain007',
+        game: 'val',
+        gameName: 'Valorant',
+        badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+        title: 'Operator Ace Retake Site A',
+        realRankId: 'imm',
+        realRank: 'Immortel 1',
+        comment: 'Crosshair placement chirurgical et repositionnement rapide.',
+        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'
+      },
+      {
+        id: 3,
+        author: '@MortisGod',
+        game: 'bs',
+        gameName: 'Brawl Stars',
+        badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        title: 'Trickshot Team Wipe Mortis',
+        realRankId: 'myth',
+        realRank: 'Mythique 2',
+        comment: 'Beau clutch mais les ennemis se sont trop collés.',
+        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+      }
+    ];
+
+    // VARIABLES DU MATCH
+    let currentIndex = 0;
+    let streamerSelectedRank = null;
+    let votesState = {};
+    let isVotingOpen = true;
+    let streamerScore = 0;
+    let chatScore = 0;
+    let ws = null;
+    let currentChannel = 'colinos10_off';
+    let currentFilter = 'all';
+
+    // VERROU ANTI-DOUBLON DE POINTS
+    let isCurrentClipScored = false;
+
+    // --- PROTOCOLE TWITCH IRC OFFICIEL ---
+    function connectTwitch(channel) {
+      if (!channel) return;
+      channel = channel.toLowerCase().replace(/[^a-z0-9_]/g, '').trim();
+      currentChannel = channel;
+
+      if (ws) {
+        try { ws.close(); } catch(e){}
+        ws = null;
+      }
+
+      const dot = document.getElementById('twitchStatusDot');
+      const text = document.getElementById('twitchStatusText');
+      const btn = document.getElementById('twitchConnectBtn');
+
+      dot.className = 'w-2 h-2 rounded-full bg-yellow-400 animate-ping';
+      text.innerText = `Connexion à #${channel}...`;
+
+      try {
+        ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+        ws.onopen = () => {
+          const anonNick = 'justinfan' + Math.floor(Math.random() * 80000 + 10000);
+          ws.send('PASS SCHMOOPIE');
+          ws.send(`NICK ${anonNick}`);
+          ws.send(`JOIN #${channel}`);
+
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+          text.innerText = `Connecté à #${channel}`;
+          btn.innerText = 'Déconnecter';
+          btn.className = 'px-2.5 py-1 text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition';
+          logChatActivity(`🟢 Connecté à <b>#${channel}</b>. En attente de <i>!rank <rang></i>`);
+        };
+
+        ws.onmessage = (event) => {
+          const raw = event.data;
+          const lines = raw.split('\r\n');
+
+          for (const line of lines) {
+            if (!line) continue;
+            if (line.startsWith('PING')) {
+              ws.send('PONG :tmi.twitch.tv');
+              continue;
+            }
+
+            const match = line.match(/^:([^!]+)![^@]+@[^\s]+\s+PRIVMSG\s+#[^\s]+\s+:(.*)$/);
+            if (match) {
+              const user = match[1];
+              const message = match[2].trim();
+              if (message.toLowerCase().startsWith('!rank')) {
+                handleRankCommand(user, message);
+              }
+            }
+          }
+        };
+
+        ws.onerror = () => {
+          dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+          text.innerText = 'Erreur IRC';
+        };
+
+        ws.onclose = () => {
+          dot.className = 'w-2 h-2 rounded-full bg-zinc-600';
+          text.innerText = 'Déconnecté';
+          btn.innerText = 'Connecter';
+          btn.className = 'px-2.5 py-1 text-[11px] font-bold bg-brand-red hover:bg-red-600 text-white rounded transition';
+        };
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function toggleTwitchConnection() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      } else {
+        const inputVal = document.getElementById('twitchChannelInput').value.trim();
+        connectTwitch(inputVal || 'colinos10_off');
+      }
+    }
+
+    function handleRankCommand(user, message) {
+      if (!isVotingOpen) return;
+      const currentClip = clipsQueue[currentIndex];
+      const gameConfig = GAME_RANKS[currentClip.game] || GAME_RANKS.rl;
+
+      let arg = message.slice(5).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!arg) return;
+
+      let allAliases = [];
+      gameConfig.ranks.forEach(rank => {
+        rank.aliases.forEach(alias => {
+          allAliases.push({
+            cleanAlias: alias.toLowerCase().replace(/[^a-z0-9]/g, ''),
+            rank: rank
+          });
+        });
+      });
+
+      allAliases.sort((a, b) => b.cleanAlias.length - a.cleanAlias.length);
+
+      let foundRank = null;
+      for (const item of allAliases) {
+        if (arg === item.cleanAlias || arg.startsWith(item.cleanAlias)) {
+          foundRank = item.rank;
+          break;
+        }
+      }
+
+      if (foundRank) {
+        votesState[user] = foundRank.id;
+        logChatActivity(`<span class="text-emerald-400 font-bold">${user}</span> ➔ <span class="text-white font-bold">${foundRank.name}</span>`);
+        updateChatBars();
+      } else {
+        logChatActivity(`<span class="text-rose-400">${user}</span>: rang inconnu ("${arg}")`);
+      }
+    }
+
+    function logChatActivity(htmlContent) {
+      const feed = document.getElementById('chatActivityFeed');
+      const row = document.createElement('div');
+      row.className = "text-[11px] text-zinc-300 truncate";
+      row.innerHTML = htmlContent;
+      feed.insertBefore(row, feed.firstChild);
+      if (feed.children.length > 20) feed.removeChild(feed.lastChild);
+    }
+
+    function selectClip(index) {
+      if (index < 0 || index >= clipsQueue.length) return;
+      currentIndex = index;
+      const clip = clipsQueue[index];
+      const gameConfig = GAME_RANKS[clip.game] || GAME_RANKS.rl;
+
+      // Réinitialisation pour le nouveau clip
+      isCurrentClipScored = false;
+      votesState = {};
+      streamerSelectedRank = null;
+      document.getElementById('selectedStreamerBadge').innerText = 'Aucun sélectionné';
+      document.getElementById('selectedStreamerBadge').className = 'text-[11px] font-bold text-zinc-500 uppercase';
+      hideRankSecret();
+
+      document.getElementById('matchProgressionText').innerText = `CLIP ${currentIndex + 1} / ${clipsQueue.length}`;
+      document.getElementById('currentClipGameBadge').innerText = clip.gameName;
+      document.getElementById('currentClipGameBadge').className = `px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider border backdrop-blur-md ${clip.badgeColor}`;
+      document.getElementById('currentClipAuthor').innerText = clip.author;
+      document.getElementById('currentClipTitle').innerText = clip.title;
+      document.getElementById('streamerPronosticTitle').innerText = `1. Choisi ton pronostic (${clip.gameName}) :`;
+      
+      const sampleAliases = gameConfig.ranks.slice(-3).map(r => `!rank ${r.aliases[0]}`).join(' / ');
+      document.getElementById('chatGameSubtitle').innerText = `Ex: ${sampleAliases}`;
+
+      const video = document.getElementById('videoPlayer');
+      const source = document.getElementById('videoSource');
+      source.src = clip.videoUrl;
+      video.load();
+
+      renderStreamerButtons(gameConfig.ranks);
+      renderChatBars(gameConfig.ranks);
+      renderQueue(currentFilter);
+    }
+
+    function renderStreamerButtons(ranks) {
+      const container = document.getElementById('streamerRankButtonsContainer');
+      container.innerHTML = '';
+
+      ranks.forEach(rank => {
+        const btn = document.createElement('button');
+        btn.className = "px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-zinc-300 flex items-center gap-1.5 transition whitespace-nowrap active:scale-95";
+        btn.id = `streamer_btn_${rank.id}`;
+        btn.onclick = () => selectStreamerGuess(rank.id, rank.name);
+
+        btn.innerHTML = `
+          <span class="w-2 h-2 rounded-full ${rank.bar}"></span>
+          <span>${rank.name}</span>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    function selectStreamerGuess(rankId, rankName) {
+      streamerSelectedRank = rankId;
+      const badge = document.getElementById('selectedStreamerBadge');
+      badge.innerText = rankName;
+      badge.className = 'text-[11px] font-black text-brand-cyan uppercase';
+
+      document.querySelectorAll('#streamerRankButtonsContainer button').forEach(b => {
+        b.classList.remove('border-brand-cyan', 'bg-brand-cyan/20', 'text-white');
+      });
+
+      const activeBtn = document.getElementById(`streamer_btn_${rankId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('border-brand-cyan', 'bg-brand-cyan/20', 'text-white');
+      }
+    }
+
+    function renderChatBars(ranks) {
+      const container = document.getElementById('chatRankBarsContainer');
+      container.innerHTML = '';
+
+      ranks.forEach(rank => {
+        const row = document.createElement('div');
+        row.id = `chat_bar_row_${rank.id}`;
+        row.className = "space-y-1";
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-xs font-bold">
+            <span class="flex items-center gap-1.5 ${rank.color}">
+              <span class="w-2 h-2 rounded-full ${rank.bar}"></span>
+              ${rank.name}
+            </span>
+            <span class="font-hud text-zinc-400"><span id="pct_${rank.id}">0</span>% <span class="text-[10px] text-zinc-600">(<span id="cnt_${rank.id}">0</span>)</span></span>
+          </div>
+          <div class="w-full bg-zinc-900 h-2 rounded-full overflow-hidden border border-zinc-800/80">
+            <div id="fill_${rank.id}" class="h-full rounded-full transition-all duration-300 ${rank.bar}" style="width: 0%"></div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+      updateChatBars();
+    }
+
+    function updateChatBars() {
+      const clip = clipsQueue[currentIndex];
+      const ranks = (GAME_RANKS[clip.game] || GAME_RANKS.rl).ranks;
+      const totalVotes = Object.keys(votesState).length;
+
+      document.getElementById('totalVotesCount').innerText = `${totalVotes} vote${totalVotes > 1 ? 's' : ''}`;
+
+      const counts = {};
+      ranks.forEach(r => counts[r.id] = 0);
+      Object.values(votesState).forEach(rId => {
+        if (counts[rId] !== undefined) counts[rId]++;
+      });
+
+      ranks.forEach(rank => {
+        const count = counts[rank.id] || 0;
+        const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+
+        const pctEl = document.getElementById(`pct_${rank.id}`);
+        const cntEl = document.getElementById(`cnt_${rank.id}`);
+        const fillEl = document.getElementById(`fill_${rank.id}`);
+
+        if (pctEl) pctEl.innerText = pct;
+        if (cntEl) cntEl.innerText = count;
+        if (fillEl) fillEl.style.width = `${pct}%`;
+      });
+    }
+
+    function revealResultAndScore() {
+      const clip = clipsQueue[currentIndex];
+      const ranks = (GAME_RANKS[clip.game] || GAME_RANKS.rl).ranks;
+      const realRankId = clip.realRankId;
+
+      const realIndex = ranks.findIndex(r => r.id === realRankId);
+      const streamerIndex = streamerSelectedRank ? ranks.findIndex(r => r.id === streamerSelectedRank) : -99;
+
+      // Meilleur vote du tchat
+      const counts = {};
+      ranks.forEach(r => counts[r.id] = 0);
+      Object.values(votesState).forEach(rId => {
+        if (counts[rId] !== undefined) counts[rId]++;
+      });
+
+      let bestChatRankId = null;
+      let maxVotes = 0;
+      for (const [rId, cnt] of Object.entries(counts)) {
+        if (cnt > maxVotes) {
+          maxVotes = cnt;
+          bestChatRankId = rId;
+        }
+      }
+      const chatIndex = bestChatRankId ? ranks.findIndex(r => r.id === bestChatRankId) : -99;
+
+      function calcPoints(guessIdx, realIdx) {
+        if (guessIdx < 0) return { pts: 0, text: '0 pt (Non choisi)' };
+        const diff = Math.abs(guessIdx - realIdx);
+        if (diff === 0) return { pts: 300, text: '+300 pts (Exact !)' };
+        if (diff === 1) return { pts: 100, text: '+100 pts (À 1 rang)' };
+        return { pts: 0, text: '0 pt (Trop loin)' };
+      }
+
+      const streamerRes = calcPoints(streamerIndex, realIndex);
+      const chatRes = calcPoints(chatIndex, realIndex);
+
+      // On n'ajoute les points au tableau de score QUE la 1ère fois (pas si on a fait "Revoir")
+      if (!isCurrentClipScored) {
+        streamerScore += streamerRes.pts;
+        chatScore += chatRes.pts;
+        isCurrentClipScored = true;
+
+        document.getElementById('scoreStreamer').innerText = streamerScore;
+        document.getElementById('scoreChat').innerText = chatScore;
+
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#ff003c', '#00e5ff', '#ffb703']
+        });
+      }
+
+      document.getElementById('overlayRealRank').innerText = clip.realRank.toUpperCase();
+      document.getElementById('overlayComment').innerText = `"${clip.comment}"`;
+
+      const sObj = ranks.find(r => r.id === streamerSelectedRank);
+      document.getElementById('overlayStreamerGuess').innerText = sObj ? sObj.name : 'Non choisi';
+      document.getElementById('overlayStreamerPoints').innerText = streamerRes.text;
+
+      const cObj = ranks.find(r => r.id === bestChatRankId);
+      document.getElementById('overlayChatGuess').innerText = cObj ? `${cObj.name} (${maxVotes} votes)` : 'Aucun vote';
+      document.getElementById('overlayChatPoints').innerText = chatRes.text;
+
+      document.getElementById('videoRevealOverlay').classList.remove('hidden');
+    }
+
+    function hideRankSecret() {
+      // Ferme simplement la fenêtre sans toucher aux scores
+      document.getElementById('videoRevealOverlay').classList.add('hidden');
+    }
+
+    function resetVotes() {
+      votesState = {};
+      logChatActivity('Votes réinitialisés');
+      updateChatBars();
+    }
+
+    function toggleChatVote() {
+      isVotingOpen = !isVotingOpen;
+      const label = document.getElementById('voteChatLabel');
+      if (isVotingOpen) {
+        label.innerText = 'Votes : OUVERTS (!rank)';
+        label.className = 'text-emerald-400';
+      } else {
+        label.innerText = 'Votes : FERMÉS';
+        label.className = 'text-rose-400';
+      }
+    }
+
+    function nextClip() {
+      if (currentIndex < clipsQueue.length - 1) {
+        selectClip(currentIndex + 1);
+      } else {
+        triggerEndGame();
+      }
+    }
+
+    function prevClip() {
+      if (currentIndex > 0) selectClip(currentIndex - 1);
+    }
+
+    function triggerEndGame() {
+      document.getElementById('endGameModal').classList.remove('hidden');
+      document.getElementById('finalTitle').innerText = `FIN DU DUEL (${clipsQueue.length} CLIPS) !`;
+      document.getElementById('finalStreamerScore').innerText = streamerScore;
+      document.getElementById('finalChatScore').innerText = chatScore;
+
+      const banner = document.getElementById('finalWinnerBanner');
+      if (streamerScore > chatScore) {
+        banner.innerText = '👑 VICTOIRE DU STREAMER !';
+        banner.className = 'font-hud font-black text-2xl text-brand-cyan my-3 glow-cyan';
+      } else if (chatScore > streamerScore) {
+        banner.innerText = '💬 VICTOIRE DU CHAT !';
+        banner.className = 'font-hud font-black text-2xl text-brand-magenta my-3 glow-magenta';
+      } else {
+        banner.innerText = '🤝 MATCH NUL / ÉGALITÉ !';
+        banner.className = 'font-hud font-black text-2xl text-brand-gold my-3 glow-gold';
+      }
+
+      confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
+    }
+
+    function restartMatch() {
+      document.getElementById('endGameModal').classList.add('hidden');
+      streamerScore = 0;
+      chatScore = 0;
+      isCurrentClipScored = false;
+      document.getElementById('scoreStreamer').innerText = 0;
+      document.getElementById('scoreChat').innerText = 0;
+      selectClip(0);
+    }
+
+    function peekSecretRank() {
+      alert(`[SECRET STREAMER]\nLe vrai rang de ce joueur est : ${clipsQueue[currentIndex].realRank}`);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function filterQueue(game) {
+      currentFilter = game;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('bg-brand-red', 'text-white');
+        b.classList.add('bg-zinc-900', 'text-zinc-400');
+      });
+      if (event && event.target) {
+        event.target.classList.add('bg-brand-red', 'text-white');
+        event.target.classList.remove('bg-zinc-900', 'text-zinc-400');
+      }
+      renderQueue(game);
+    }
+
+    function renderQueue(filter = 'all') {
+      const container = document.getElementById('clipsListContainer');
+      container.innerHTML = '';
+
+      const filtered = clipsQueue.filter(c => filter === 'all' || c.game === filter);
+      document.getElementById('queueCount').innerText = clipsQueue.length;
+
+      filtered.forEach((clip) => {
+        const originalIndex = clipsQueue.indexOf(clip);
+        const isActive = originalIndex === currentIndex;
+
+        const card = document.createElement('div');
+        card.className = `p-2.5 rounded-lg border transition cursor-pointer flex items-center justify-between ${
+          isActive ? 'bg-zinc-900/90 border-brand-red shadow-md' : 'bg-zinc-950/40 border-zinc-800/80 hover:bg-zinc-900/40'
+        }`;
+        card.onclick = () => selectClip(originalIndex);
+
+        card.innerHTML = `
+          <div class="flex flex-col gap-0.5 truncate pr-2">
+            <span class="text-xs font-bold text-zinc-200 truncate">${originalIndex + 1}. ${clip.title}</span>
+            <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <span class="font-mono text-[9px] px-1 py-0.2 rounded border font-bold ${clip.badgeColor}">${clip.game.toUpperCase()}</span>
+              <span class="truncate">${clip.author}</span>
+            </div>
+          </div>
+          <i data-lucide="${isActive ? 'play-circle' : 'film'}" class="w-4 h-4 shrink-0 ${isActive ? 'text-brand-red' : 'text-zinc-600'}"></i>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function promptAddCustomClip() {
+      const url = prompt("Lien direct MP4 de la vidéo :", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4");
+      if (!url) return;
+
+      const game = prompt("Jeu (rl / val / bs / ow2 / pal) :", "rl").toLowerCase().trim();
+      const realRankId = prompt("Identifiant du vrai rang (ex: gc, plat, imm, diam, myth...) :", "diam").toLowerCase().trim();
+      const realRankName = prompt("Nom d'affichage du vrai rang (ex: Platine 3, Grand Champion) :", "Platine 3");
+
+      const gameConfigs = {
+        rl: { name: 'Rocket League', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+        val: { name: 'Valorant', badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
+        bs: { name: 'Brawl Stars', badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+        ow2: { name: 'Overwatch 2', badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+        pal: { name: 'Paladins', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' }
+      };
+
+      const gInfo = gameConfigs[game] || gameConfigs.rl;
+
+      clipsQueue.push({
+        id: clipsQueue.length + 1,
+        author: `@Viewer_${Math.floor(Math.random() * 800 + 100)}`,
+        game: gameConfigs[game] ? game : 'rl',
+        gameName: gInfo.name,
+        badgeColor: gInfo.badge,
+        title: `Clip #${clipsQueue.length + 1}`,
+        realRankId: realRankId,
+        realRank: realRankName,
+        comment: 'Ajouté en direct pendant le live.',
+        videoUrl: url
+      });
+
+      renderQueue(currentFilter);
+      document.getElementById('matchProgressionText').innerText = `CLIP ${currentIndex + 1} / ${clipsQueue.length}`;
+    }
+
+    // Démarrage initial
+    window.onload = () => {
+      selectClip(0);
+      connectTwitch('colinos10_off');
+    };
+  </script>
+</body>
+</html>
