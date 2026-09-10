@@ -1,0 +1,17 @@
+{
+  "1196452364564049930": {
+    "channelId": "1222491297000984632",
+    "customTemplates": {
+      "memberLeave": "<:leave:1227446776278286396> Leave Member - {user}",
+      "memberJoin": "<:entry:1227446777297371148> New Member - {user}",
+      "memberBan": "<:ban:1227446774445117492>  Ban Member - {user}"
+    },
+    "enabledEvents": {
+      "voiceLeave": false,
+      "voiceJoin": false,
+      "voiceSwitch": false,
+      "messageUpdate": false,
+      "messageDelete": false
+    }
+  }
+}
