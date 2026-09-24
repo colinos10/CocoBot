@@ -70,16 +70,8 @@ for (const filePath of commandFiles) {
   }
 }
 
-client.once(Events.ClientReady, async (readyClient) => {
+client.once(Events.ClientReady, (readyClient) => {
   console.log(`🤖 Bot connecté en tant que ${readyClient.user.tag}`);
-
-  startOverlayServer(4000);
-
-  try {
-    await connectTwitch();
-  } catch (err) {
-    console.error('❌ Erreur de connexion à Twitch :', err);
-  }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
