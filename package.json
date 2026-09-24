@@ -16,8 +16,7 @@
   "dependencies": {
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
-    "socket.io": "^4.8.3",
-    "tmi.js": "^1.8.5"
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",

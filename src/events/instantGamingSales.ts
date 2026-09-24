@@ -1,24 +1,38 @@
-// src/events/instantGamingSales.ts
-import { Client, Events, Message } from 'discord.js';
-import { sendTwitchMessage } from '../utils/twitchChat.js';
-import { triggerSaleAnimation } from '../utils/overlayServer.js';
+import { Events, Message } from 'discord.js';
+import fetch from 'node-fetch';
 
-const IG_CHANNEL_ID = process.env.IG_SALES_CHANNEL_ID as string;
+const SALES_CHANNEL_ID = process.env.IG_SALES_CHANNEL_ID!;
+const IG_BOT_ID = process.env.IG_BOT_ID!;
+const RELAY_URL = process.env.RELAY_URL!;
+const RELAY_SECRET = process.env.RELAY_SECRET!;
 
-export function registerInstantGamingSalesEvent(client: Client) {
+export function registerInstantGamingSalesEvent(client: any) {
   client.on(Events.MessageCreate, async (message: Message) => {
-    if (message.channelId !== IG_CHANNEL_ID || !message.author.bot) return;
+    if (message.channelId !== SALES_CHANNEL_ID) return;
+    if (message.author.id !== IG_BOT_ID) return; // ✅ on accepte SEULEMENT le bot IG
 
-    const content = message.content || message.embeds[0]?.description || 'Nouvelle vente !';
-
-    console.log(`💰 Nouvelle vente Instant Gaming détectée : ${content}`);
+    const title = message.embeds[0]?.title ?? 'Nouvelle vente';
+    const content = message.embeds[0]?.description ?? message.content;
+    const image = message.embeds[0]?.image?.url ?? null;
 
     try {
-      await sendTwitchMessage('🎉 Nouvelle vente Instant Gaming ! Merci pour le soutien !');
-    } catch (err) {
-      console.error('❌ Erreur envoi message Twitch :', err);
-    }
+      const res = await fetch(RELAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RELAY_SECRET}`,
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          image,
+        }),
+      });
 
-    triggerSaleAnimation({ message: content });
+      if (!res.ok) throw new Error(`Statut HTTP ${res.status}`);
+      console.log('✅ Webhook envoyé au relais local avec succès');
+    } catch (err) {
+      console.error('❌ Erreur envoi webhook vers relais local :', err);
+    }
   });
 }

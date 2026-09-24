@@ -8,25 +8,22 @@ import { handleVoiceStateUpdate } from './events/voiceStateUpdate.js';
 import { registerLogsEvents } from './events/logsHandler.js';
 import { registerWelcomeEvent } from './events/welcomeHandler.js';
 import { registerInstantGamingSalesEvent } from './events/instantGamingSales.js';
-import { startOverlayServer } from './utils/overlayServer.js';
-import { connectTwitch } from './utils/twitchChat.js';
-
 dotenv.config();
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates,  // Détection des mouvements vocaux
-    GatewayIntentBits.GuildMessages,     // Détection des messages créés/modifiés/supprimés
-    GatewayIntentBits.MessageContent,    // Lecture du contenu des messages supprimés/modifiés
-    GatewayIntentBits.GuildMembers       // Détection des arrivées/départs/expulsions/bans
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
   ],
   partials: [
     Partials.Message,
     Partials.Channel,
     Partials.GuildMember,
-    Partials.User
-  ]
+    Partials.User,
+  ],
 });
 
 const commands = new Collection<string, Command>();
@@ -34,7 +31,6 @@ const commands = new Collection<string, Command>();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const commandsPath = path.join(__dirname, 'commands');
 
-// Fonction récursive pour charger tous les fichiers dans tous les sous-dossiers
 function getCommandFiles(dir: string): string[] {
   let files: string[] = [];
   if (!fs.existsSync(dir)) return files;
@@ -56,7 +52,6 @@ function getCommandFiles(dir: string): string[] {
   return files;
 }
 
-// Chargement de toutes les commandes
 const commandFiles = getCommandFiles(commandsPath);
 
 for (const filePath of commandFiles) {
@@ -77,14 +72,17 @@ for (const filePath of commandFiles) {
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`🤖 Bot connecté en tant que ${readyClient.user.tag}`);
-  
+
   startOverlayServer(4000);
-  await connectTwitch();
+
+  try {
+    await connectTwitch();
+  } catch (err) {
+    console.error('❌ Erreur de connexion à Twitch :', err);
+  }
 });
 
-// Gestionnaire des interactions
 client.on(Events.InteractionCreate, async (interaction) => {
-  // ⚡ 1. Autocomplétion dynamique (filtre les rangs selon le jeu sélectionné)
   if (interaction.isAutocomplete()) {
     const command = commands.get(interaction.commandName);
     if (!command || !command.autocomplete) return;
@@ -97,7 +95,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  // 💬 2. Commandes Slash (/commande)
   if (interaction.isChatInputCommand()) {
     const command = commands.get(interaction.commandName);
     if (!command) {
@@ -118,24 +115,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  // 🔘 3. Boutons & Menus déroulants (gérés par les collectors actifs)
   if (interaction.isButton() || interaction.isStringSelectMenu()) {
     return;
   }
 });
 
-// Écouteur pour les salons vocaux temporaires
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   await handleVoiceStateUpdate(oldState, newState);
 });
 
-// Enregistrement des écouteurs de logs (messages, membres, kicks, bans, vocal)
 registerLogsEvents(client);
-
-// Enregistrement de l'écouteur de bienvenue
 registerWelcomeEvent(client);
-
-// Enregistrement de l'écouteur de ventes Instant Gaming
 registerInstantGamingSalesEvent(client);
 
 client.login(process.env.DISCORD_TOKEN);
