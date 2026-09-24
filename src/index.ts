@@ -7,6 +7,9 @@ import { Command } from './types.js';
 import { handleVoiceStateUpdate } from './events/voiceStateUpdate.js';
 import { registerLogsEvents } from './events/logsHandler.js';
 import { registerWelcomeEvent } from './events/welcomeHandler.js';
+import { registerInstantGamingSalesEvent } from './events/instantGamingSales.js';
+import { startOverlayServer } from './utils/overlayServer.js';
+import { connectTwitch } from './utils/twitchChat.js';
 
 dotenv.config();
 
@@ -72,8 +75,11 @@ for (const filePath of commandFiles) {
   }
 }
 
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
   console.log(`🤖 Bot connecté en tant que ${readyClient.user.tag}`);
+  
+  startOverlayServer(4000);
+  await connectTwitch();
 });
 
 // Gestionnaire des interactions
@@ -128,5 +134,8 @@ registerLogsEvents(client);
 
 // Enregistrement de l'écouteur de bienvenue
 registerWelcomeEvent(client);
+
+// Enregistrement de l'écouteur de ventes Instant Gaming
+registerInstantGamingSalesEvent(client);
 
 client.login(process.env.DISCORD_TOKEN);
