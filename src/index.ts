@@ -7,7 +7,8 @@ import { Command } from './types.js';
 import { handleVoiceStateUpdate } from './events/voiceStateUpdate.js';
 import { registerLogsEvents } from './events/logsHandler.js';
 import { registerWelcomeEvent } from './events/welcomeHandler.js';
-import { registerInstantGamingSalesEvent } from './events/instantGamingSales.js';
+import { registerInstantGamingSalesEvent, connectTwitch } from './events/instantGamingSales.js'; // ⬅️ Importe connectTwitch ici
+
 dotenv.config();
 
 const client = new Client({
@@ -70,8 +71,15 @@ for (const filePath of commandFiles) {
   }
 }
 
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
   console.log(`🤖 Bot connecté en tant que ${readyClient.user.tag}`);
+
+  // 🚀 Connexion au chat Twitch au démarrage de CocoBot
+  try {
+    await connectTwitch();
+  } catch (err) {
+    console.error('❌ Erreur lors de la connexion Twitch initiale :', err);
+  }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
